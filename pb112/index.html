@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Yourself</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #111; color: #ddd; min-height: 100vh; display: flex;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .container { max-width: 720px; width: 100%; }
+  .question-card {
+    background: #1a1a1a; border: 1px solid #333; border-radius: 10px;
+    padding: 30px; margin-bottom: 16px;
+  }
+  .question-text {
+    font-size: 1.05em; line-height: 1.6; margin-bottom: 22px; white-space: pre-wrap;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  .question-text code, .question-text pre {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.9em;
+  }
+  .question-text pre {
+    background: #0d0d0d; padding: 12px 16px; border-radius: 6px;
+    overflow-x: auto; margin: 8px 0;
+  }
+  .answers { display: flex; flex-direction: column; gap: 8px; }
+  .answer-label {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px;
+    background: #222; border: 1px solid #333; border-radius: 6px;
+    cursor: pointer; transition: background 0.15s; line-height: 1.4;
+  }
+  .answer-label:hover { background: #2a2a2a; }
+  .answer-label input[type=checkbox] {
+    margin-top: 2px; accent-color: #4a9; width: 16px; height: 16px; flex-shrink: 0;
+  }
+  .answer-label.correct { background: #143a2a; border-color: #2a6a4a; }
+  .answer-label.incorrect { background: #3a1414; border-color: #6a2a2a; }
+  .answer-label.missed { background: #2a2a1a; border-color: #6a6a2a; }
+  .btn {
+    display: inline-block; padding: 10px 24px; border: 1px solid #4a9;
+    background: transparent; color: #4a9; border-radius: 6px; cursor: pointer;
+    font-size: 0.95em; transition: all 0.15s; margin-top: 20px;
+  }
+  .btn:hover { background: #4a9; color: #111; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:disabled:hover { background: transparent; color: #4a9; }
+  .feedback {
+    margin-top: 16px; padding: 12px 16px; border-radius: 6px;
+    font-size: 0.95em; display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: #143a2a; border: 1px solid #2a6a4a; color: #5c5; }
+  .feedback.wrong-fb { background: #3a1414; border: 1px solid #6a2a2a; color: #c55; }
+  .progress {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; font-size: 0.85em; color: #777;
+  }
+  .progress-bar {
+    flex: 1; height: 4px; background: #333; border-radius: 2px;
+    margin: 0 16px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: #4a9; transition: width 0.3s;
+  }
+  .score { color: #4a9; font-weight: 600; }
+  .retry-section {
+    margin-top: 30px; text-align: center;
+  }
+  .retry-section .badge {
+    display: inline-block; background: #3a1414; color: #c55;
+    padding: 4px 10px; border-radius: 4px; font-size: 0.8em; margin-left: 8px;
+  }
+  .done-message { text-align: center; padding: 40px; }
+  .done-message h2 { color: #4a9; margin-bottom: 8px; }
+  .done-message p { color: #777; }
+  .explanation { font-size: 0.85em; color: #999; margin-top: 8px; }
+  hr { border: none; border-top: 1px solid #333; margin: 20px 0; }
+  code { background: #0d0d0d; padding: 2px 6px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+<script>
+const QUESTIONS_DATA = [{"question": "Která tvrzení budou pravdivá po vykonání těchto příkazů?\nA y;\n{\n    A x=new A();\n    y=x;\n}\nA z=y;", "answers": ["Na jedinou instanci třídy A budou existovat dva odkazy. Konkrétně z proměnných y,z.", "Na jedinou instanci třídy A budou existovat tři odkazy. Konkrétně z proměnných x,y,z.", "Proměnné x,y,z se budou odkazovat na jedinou instanci třídy A, kterou nám ale garbage collector již může kdykoliv odstranit.", "Proměnné y,z budou null, protože isntance třídy A přestala být použitelná opuštěním bloku (garbage collector již může kdykoliv odstranit)."], "correct": [0]}, {"question": "Uvažujme tyto třídy.\nclass A {}\nclass B extends A {}\nclass C extends B {}\nclass Q< T > { }\nOznačte všechna pravdivá tvrzení.", "answers": ["Q< A > je podtypem Q< ? extends B >.", "Q< A > je podtypem Q< ? super B >.", "Q< C > je podtypem Q< ? extends B >.", "Q< C > je podtypem Q< ? super B >."], "correct": [1, 2]}, {"question": "Uvažujme tyto třídy.\n\nclass A {}\nclass B extends A {}\nclass C extends B {}\nclass Q< T > { }\n\nOznačte všechna pravdivá tvrzení.", "answers": ["Q<? extends C > je podtypem Q<? extends A >.", "Q<? extends C > je podtypem Q<? super A >.", "Q<? super A > je podtypem Q<? extends C >.", "Q<? super A > je podtypem Q<? super C >."], "correct": [0, 3]}, {"question": "Která tvrzení jsou pravdivá?", "answers": ["Všechny proměnné typu třída jsou uloženy na haldě.", "Všechny proměnné primitivních typů jsou uloženy na zásobníku.", "Všechny lokální proměnné, bez ohledu na typ, jsou uloženy na zásobníku.", "Všechny proměnné, které jsou atributy třídy, jsou uloženy na haldě.", "Všechny hodnoty primitivních typů jsou vždy uloženy na zásobníku.", "Všechny hodnoty typu třída jsou vždy uloženy na haldě."], "correct": [2, 3, 5]}, {"question": "Přeloží se následující program?\n\npublic final class Algorithm {\n    public static < T > T max(T x, T y) {\n        if (x < y) return y; else return x;\n    }\n}", "answers": ["Ano, protože v programu není volání metody max pro takový typ, pro nějž by výraz x < y neměl smysl.", "Ne, protože operátor < lze aplikovat jen na primitivní typy a ty zase nelze dosadit za typové proměnné.", "Ne, protože < T > má správně být za jménem metody."], "correct": [1]}, {"question": "Mějme tento blok { int i=1; { int j=i; } i=j; } .\nKterá tvrzení jsou pravdivá?", "answers": ["Celý blok se vyhodnotí bez chyby.", "Při vyhodnocování vnořeného bloku dojde k chybě, protože proměnná i není v tomto bloku platná.", "Při vyhodnocování i=j dojde k chybě, protože proměnná j už tam není platná."], "correct": [2]}, {"question": "Mějme tento blok { int i=1; { int j=1; } i=j; } .\nKterá tvrzení jsou pravdivá?", "answers": ["Celý blok se vyhodnotí bez chyby.", "Při vyhodnocování vnořeného bloku dojde k chybě, protože proměnná i není v tomto bloku platná.", "Při vyhodnocování i=j dojde k chybě, protože proměnná j už tam není platná."], "correct": [2]}, {"question": "V abstraktní třídě máme abstraktní metodu. Označte všechna pravdivá tvrzení o této metodě.", "answers": ["Určitě není statická.", "Nemá implementaci.", "Je definovaná (kromě jiného) se slovem final.", "Nemá implementaci, jen pokud je definovaná se slovem default."], "correct": [0, 1]}, {"question": "Uvažujme tyto definice.\ninterface I< T > {}\nclass C< T > implements I< T > { }\nPřeloží se následující kód?\nI< Integer > x = new C< Integer >();", "answers": ["Ano, protože C< Integer > je podtypem I< Integer >.", "Ano, protože I< Integer > je podtypem C< Integer >.", "Ne, protože C< Integer > není podtypem I< Integer >.", "Ne, protože I< Integer > není podtypem C< Integer >.", "Ne, protože generická třída nemůže implementovat generické rozhraní."], "correct": [0]}, {"question": "Mějme třídy class A { int i; float f; } a class B { A a; B b; }.\nKterá tvrzení budou pravdivá po vykonání těchto příkazů?\n\nA x = new A();\nx.i = 42;\nx.f = 3.14f;\nB y = new B();\ny.a = x;\ny.b = y;", "answers": ["y.b.b.a.i vrátí 42.", "Při vyhodnocení y.b.b.a.i dojde k chybě.", "x.f <= 2.3 vrátí true.", "y.a.i + x.i == 2*y.b.b.a.i vrátí true."], "correct": [0, 3]}, {"question": "Která tvrzení o řetězcích jsou pravdivá?", "answers": ["Všechny řetězce jsou umístěny na haldě.", "Všechny řetězce jsou umístěny na zásobníku (protože vždy mají fixní délku, kterou nelze měnit).", "Každá proměnná typu String drží řetězec odkazem.", "Každá proměnná typu String drží řetězec hodnotu."], "correct": [0, 2]}, {"question": "Můžeme definovat mnoho tříd, které všechny implementují rozhraní Comparator pro danou třídu A. Takto můžeme získat mnoho různých uspořádání pro tytéž instance třídy A.", "answers": ["Ano.", "Ne."], "correct": [0]}, {"question": "Pro správnou implemntaci metody compareTo musí vždy nutně platit: (x.compareTo(y)==0) == x.equals(y).", "answers": ["Ano.", "Ne."], "correct": [1]}, {"question": "Která tvrzení jsou pravdivá?", "answers": ["Všechny hodnoty typu pole jsou vždy umístěny na haldě.", "Každé pole obsahující hodnoty primitivních typů je umístěno na zásobníku, jinak na haldě.", "Každá proměnná typu pole drží vždy svou hodnotu odkazem.", "Každá proměnná typu pole primitivních typů drží pole hodnotou, jinak odkazem."], "correct": [0, 2]}, {"question": "Pro správnou implmentaci metody compareTo musí vždy nutně platit: (x.compareTo(y)==0) == x.equals(y).", "answers": ["Ano.", "Ne."], "correct": [1]}, {"question": "Uvažujme třídy class A { int x; void f() { x=1; } } class B extends A { void f() { x=2; } }.\nKteré tvrzení bude pravdivé pro tento kód:\nA w=new B();\nw.f();", "answers": ["Dojde k chybě při překladu, protože w je typu A, ale vkládá se do ní hodnota typu B.", "Dojde k chybě při překladu, protože v B budou dvě metody se stejným jménem a stejným seznamem parametrů.", "Překlad proběhne bez chyby. Výraz w.f() zavolá metodu f ve třídě A.", "Překlad proběhne bez chyby. Výraz w.f() zavolá metodu f ve třídě B."], "correct": [3]}, {"question": "Která tvrzení jsou pravdivá o tomto kódu? Předpokládejme, že n je proměnná typu int.\n\nint[][] c = new int[2][];\nc[0] = new int[6];\nc[1] = new int[n];", "answers": ["Dojde k chybě překladu prvního příkazu, protože není uvedena velikost druhé dimenze (je tam pouze []).", "Dojde k chybě překladu posledního příkazu, protože velikost pole musí být fixní a zde je použita proměnná.", "Jde o validní kód. Překlad i vykonání proběhne bez chyby. Pokud n <= 0 , tak v c[1] bude null.", "Kód se přeloží, ale pokud n != 6 , tak vykonání skončí s chybou na posledním příkazu díky rozdílným počtem prvků v c[0] a c[1] .", "Kód se přeloží, ale pokud n <= 0 , tak vykonání skončí s chybou na posledním příkazu díky hodnotě v n .", "Kód se přeloží, ale pokud n < 0 , tak vykonání skončí s chybou na posledním příkazu díky hodnotě v n ."], "correct": [5]}, {"question": "Uvažujme tato tvrzení o vztahu mezi metodami equals a hashCode :\na) Pokud platí x.equals(y) , pak též musí platit x.hashCode() == y.hashCode() .\nb) Pokud platí x.hashCode() == y.hashCode() , pak též musí platit x.equals(y) .\nJak je to ve skutečnosti? Která tvrzení musí nutně platit?", "answers": ["Obě.", "Pouze a).", "Pouze b).", "Nutně žádné. Ale platnost a) je žádoucí z hlediska efektivity v hashovacích tabulkách."], "correct": [1]}, {"question": "Pokud třída správně implementuje rozhraní Comparable, tak je na této třídě definované přirozené uspořádání.", "answers": ["Ano.", "Ne."], "correct": [0]}, {"question": "O správnosti dědičnosti `class A {} class B extends A {}` mezi třídami A,B nejlépe rozhodne odpověď na kterou z těchto otázek?", "answers": ["Každá instance B je instancí A?", "Každá instance B má instanci A?", "Platí LSP pro instance A a B?", "Každá instance B je instancí A a platí LSP pro instance A a B?", "Každá instance B má instanci A a platí LSP pro instance A a B?", "Každá instance B je instancí A nebo platí LSP pro instance A a B?", "Každá instance B má instanci A nebo platí LSP pro instance A a B?"], "correct": [3]}, {"question": "Označte všechna pravdivá tvrzení o výčtovém typu (enum).", "answers": ["Každá hodnota výčtového typu je v programu nejvýše jedna, tj. nemůžeme si vytvářet nové instance.", "Hodnoty výčtového typu leží vždy na haldě.", "Pro proměnné výčtového typu bude operátor == vždy vracet stejný výsledek jako metoda equals.", "Za výčtem hodnot ve výčtovém typu můžeme definovat pouze klasické (tj. ne statické) metody a atributy."], "correct": [0, 1]}, {"question": "Které všechny následující vlastnosti platí pro LinkedList?", "answers": ["Implementuje Deque.", "Umožňuje rychlý přístup k prvku podle indexu.", "Vkládání a rušení prvků na začátku i na konci seznamu je efektivní."], "correct": [2]}, {"question": "Které všechny následující vlastnosti platí pro PriorityQueue?", "answers": ["Prvky se prochází v pořadí v jakém byly do fronty vloženy.", "Nejmenší prvek ve frontě (v daném uspořádání - přirozeném nebo přes komparátor) je vždy ma indexu 0.", "Interně používá haldu (heap) pro ukládání prvků v poli."], "correct": [1, 2]}, {"question": "Uvažujme tuto třídu A\nclass A {\n    static { a=null; }\n    static A a = new A();\n}\nKteré tvrzení je pravdivé?", "answers": ["Dojde k chybě překladu, protože do atributu se přiřazuje dříve, než je ve třídě definován.", "V proměnné a bude platná instance třídy A, protože přiřazení a=null se provede před přiřazením v static A a = new A(); .", "● ✘V proměnné a bude null, protože přiřazení v static A a = new A(); se provede před přiřazením a=null ."], "correct": [1]}, {"question": "Které všechny následující vlastnosti platí pro ArrayList?", "answers": ["Umožňuje rychlý přístup k prvku přes index.", "Vkládání doprostřed seznamu je efektivní.", "Nemůže obsahovat duplicitní prvky (stejné ve smyslu metody equals).", "Pokud změníme prvek v kolekci, tak může dojít k nedefinovanému chování kolekce."], "correct": [0]}, {"question": "Uvažme třídu class A { int x=42; } a toto její použití:\n\nfinal A a = new A();\na.x = 1;\na = new A();\n\nOznačte pravdivé tvrzení.", "answers": ["Kód se nepřeloží, protože na posledním řádku zapisujeme do konstanty. Bez něj by byl kód v pořádku.", "Kód se nepřeloží, protože final mohou být pouze proměnné, které jsou atributy třídy.", "Kód se nepřeloží, protože na druhém řádku zapisujeme do konstanty. Bez něj by byl kód v pořádku.", "Kód se nepřeloží, protože na druhém a třetím řádku zapisujeme do konstanty. Bez nich by byl kód v pořádku."], "correct": [0]}, {"question": "Označte všechna pravdivá tvrzení o záznamu (record).", "answers": ["Hodnoty záznamu jsou umístěny vždy na haldě.", "Hodnota záznamu v lokální proměnné je na zásobníku a v atributu třídy na haldě.", "Ze záznamu nelze dědit.", "Ze záznamu může dědit pouze další záznam, třída ne.", "Ze záznamu může dědit záznam i třída."], "correct": [0, 2]}, {"question": "Kolik rozhraní může jedna třída implementovat?", "answers": ["Nejvýše jedno.", "Maximálně dvě.", "Libovolný počet.", "Žádné."], "correct": [2]}, {"question": "Která všechna tvrzení o metodě removeNegative jsou pravdivá?\nPředpokládáme, že v seznamu jsou jen platná čísla (není tam null).\n\nvoid removeNegative(List< Integer > list) {\n    Iterator< Integer > it = list.iterator();\n    while (it.hasNext()) {\n        Integer x = it.next();\n        if (x < 0) it.remove();\n    }\n}", "answers": ["Dojde k chybě při překladu. Rozhraní Iterator nedefinuje metodu remove().", "Dojde k chybě při překladu. Vymazání prvku přes iterátor se má správně provést voláním list.remove(it).", "K chybě nedojde. Ale metoda přeskočí první prvek, protože se volá it.next(). Má se volat it.get() pro získání aktuálního prvku a pak it.next() pro přechod na další prvek.", "K chybě nedojde. Metoda odstraní všechny negativní čísla ze seznamu list (včetně prvního)"], "correct": [3]}, {"question": "Která všechna tvrzení o nemodifikovatelných kolekcích jsou pravdivá?", "answers": ["Rozhraní List a Set definují metody na získávání nezávislých nemodifikovatelných kolekcí.", "Voláním Collections.unmodifiableCollection(...) získáme kolekci, kterou již žádným způsobem nelze změnit.", "Voláním Map.of(...) získáme mapu, kterou již žádným způsobem nelze změnit.", "Metoda Collections.unmodifiableMap(...) není definována, protože Map není kolekce."], "correct": [0, 2]}, {"question": "Co bude platit pro tento kód?\n\ninterface Animal {\n    default void sound() {\n        System.out.println(\"Animal sound\");\n    }\n}\nclass Dog implements Animal\n{\n    public void sound() {\n        System.out.println(\"Bark\");\n    }\n}\nAnimal a = new Dog();\na.sound();", "answers": ["Vypíše se \"Animal sound\".", "⚪ Dojde k chybě překladu (proměnná a má být typu třídy Dog, nikoliv rozhraní).", "⚪ Dojde k chybě překladu (přepisuje se defaultní metoda).", "⚪ *Vypíše se \"Bark\"."], "correct": [3]}, {"question": "Co bude platit pro tento kód?\n\nclass Animal {}\nclass Dog extends Animal {}\nAnimal a = new Dog();\nSystem.out.println(a.getClass() == Animal.class);", "answers": ["true.", "false.", "Chyba kompilace.", "Závisí na JVM."], "correct": [1]}, {"question": "Co vrátí metoda getClass() zavolaná na instanci třídy?", "answers": ["Objekt typu Class, který reprezentuje runtime typ instance.", "Název třídy.", "Novou instanci třídy té instance.", "Typ proměnné, která se na instanci odkazuje."], "correct": [0]}, {"question": "Která všechna tvrzení o vnořených třídách jsou pravdivá?", "answers": ["Statická vnořená třída je spojena s instancí vnější třídy.", "Ve vnější třídě máme přístup pouze ke statický metodám a atributům vnitřní třídy.", "Instanci vnitřní třídy vytváříme jen přes instanci vnější třídy.", "Vnořené třídy definují typy, nikoliv hodnoty. Proto žádná vnořená třída (čistě její definice) není výrazem."], "correct": [1, 2]}, {"question": "Které všechny následující vlastnosti platí pro HashMap?", "answers": ["Zaručuje pořadí klíčů při procházení kolekce v pořadí v jakém byly vloženy.", "Nemůže obsahovat duplicitní klíče (stejně ve smyslu metody equals).", "Klíče musí být uspořádány buď přirozeným uspořádáním nebo komparátorem.", "Pokud změníme klíč v kolekci, tak může dojít k nedefinovanému chování kolekce."], "correct": [1, 3]}, {"question": "Co bude platit pro tento kód?\n\ninterface Animal {\n    default void sound() {\n        System.out.println(\"Animal sound\");\n    }\n}\nclass Dog implements Animal {\n    public void sound() {\n        System.out.println(\"Bark\");\n    }\n}\nAnimal a = new Dog();\na.sound();", "answers": ["Vypíše se \"Animal sound\".", "Dojde k chybě překladu (proměnná a má být typu třídy Dog, nikoliv rozhraní).", "Dojde k chybě překladu (přepisuje se defaultní metoda).", "● ✔*Vypíše se \"Bark\"."], "correct": [3]}, {"question": "Uvažujme tyto definice.\n\n```\ninterface I< T > {}\nclass C< T > implements I< T > { }\n```\n\nPřeloží se následující kód?\n\n```\nI< Integer > x = new C< Integer >();\n```", "answers": ["Ano, protože C< Integer > je podtypem I< Integer >.", "Ano, protože I< Integer > je podtypem C< Integer >.", "Ne, protože C< Integer > není podtypem I< Integer >.", "Ne, protože I< Integer > není podtypem C< Integer >.", "Ne, protože generická třída nemůže implementovat generické rozhraní."], "correct": [0]}, {"question": "Která všechna z následujících tvrzeních o proudech jsou pravdivá?", "answers": ["Každá průběžná (intermediate) operace vrací původní proud změněný tak, že na jeho prvcích byla aplikována daná operace.", "Každá průběžná (intermediate) operace vrací nový proud, na jehož prvcích je daná operace aplikována.", "V kanálu (pipeline) proudu může být libovolný počet průběžných operací. Třeba i žádná.", "V kanálu (pipeline) proudu může být libovolný nenulový počet průběžných operací.", "Po provedení koncové operace proud již dále nelze použít.", "Po provedení koncové operace proud lze dále použít, ale je to zbytečné, protože bude prázdný (vše již bylo zpracováno)."], "correct": [1, 2, 4]}, {"question": "Která všechna tvrzení o lambda výrazech jsou pravdivá?", "answers": ["Informace v kontextu lambda výrazu se též bere z těchto míst v kódu: přetypování, příkaz return.", "Informace v kontextu lambda výrazu se nebere z těchto míst v kódu: přetypování, příkaz return.", "Překladač volí cílový typ lambda výrazu jen podle počtu a typů parametrů metod.", "Překladač volí cílový typ lambda výrazu nejen podle počtu a typů parametrů metod ale též podle typu návratové hodnoty."], "correct": [0, 3]}, {"question": "Uvažujme tyto třídy.\n\nclass A {}\nclass B extends A {}\nclass C< T super B > { }\n\nPřeloží se následující kód?\n\nC< A > x = new C< B >();", "answers": ["Ano, protože B dědí z A a B je dolní mezí pro T.", "Ano, protože B dědí z A a B je horní mezí pro T.", "Ano, protože C< B > je podtypem C< A >.", "Ano, protože C< A > je podtypem C< B >.", "Ne, protože C< B > není podtypem C< A >.", "Ne, protože C< A > není podtypem C< B >.", "Ne, protože chyba je již v definici třídy C (nelze definovat dolní mez pro T)."], "correct": [6]}, {"question": "Uvažujme následující kód:\n\n```\nclass C { int f(int x) { return x; } }\nFunction< Integer, Integer > x = C :: f;\nFunction< Integer, Integer > y = new C() :: f;\nBiFunction< C, Integer, Integer > z = C :: f;\n```\n\nKteré z definic proměnných x,y,z jsou v pořádku, tj. nedojde k chybě při jejich překladu?", "answers": ["Žádná proměnná se nepřeloží.", "Přeloží se pouze proměnná x.", "Přeloží se pouze proměnná y.", "Přeloží se pouze proměnná z.", "Přeloží se pouze proměnné x a y.", "Přeloží se pouze proměnné x a z.", "Přeloží se pouze proměnné y a z.", "Všechny proměnné se přeloží."], "correct": [6]}, {"question": "Uvažujme tyto třídy.\n\nclass A {}\nclass B extends A {}\nclass C extends B {}\nclass Q< T > { }\n\nOznačte všechna pravdivá tvrzení.", "answers": ["Q<? extends C> je podtypem Q<? extends A>.", "Q<? extends C> je podtypem Q<? super A>.", "Q<? super A> je podtypem Q<? extends C>.", "Q<? super A> je podtypem Q<? super C>."], "correct": [0, 3]}, {"question": "Co může současně obsahovat jak abstraktní třída, tak i rozhraní?\nOznačte všechna pravdivá tvrzení.", "answers": ["Klasické atributy.", "Metody s implementací (tj. s blokem příkazů).", "Abstraktní metody (tj. bez implementace).", "Konstruktory."], "correct": [1]}, {"question": "Která všechna z následujících tvrzení o proudech jsou pravdivá?", "answers": ["Každá průběžná (intermediate) operace vrací původní proud změněný tak, že na jeho prvcích byla aplikována daná operace.", "Každá průběžná (intermediate) operace vrací nový proud, na jehož prvcích je daná operace aplikována.", "V kanálu (pipeline) proudu může být libovolný počet průběžných operací. Třeba i žádná.", "V kanálu (pipeline) proudu může být libovolný nenulový počet průběžných operací.", "Pro provedení koncové operace proud již dále nelze použít.", "Po provedení koncové operace proud lze dále použít, ale je to zbytečné, protože bude prázdný (vše již bylo zpracováno)."], "correct": [1, 2, 4]}, {"question": "Která všechna tvrzení o lambda výrazech jsou pravdivá?", "answers": ["Uvnitř lambda výrazu nemáme přístup k proměnným, které jsou platné v bloku, kde je lambda výraz definován.", "Uvnitř lambda výrazu máme přístup k proměnným, které jsou platné v bloku, kde je lambda výraz definován a mohou ale nemusí být efektivně konstantní.", "Uvnitř lambda výrazu máme přístup k proměnným, které jsou platné v bloku, kde je lambda výraz definován a jsou navíc efektivně konstantní.", "Pokud je lambda výraz definován uvnitř statické metody, tak nemá přístup k ostatním statický metodám a statickým atributům třídy.", "Pokud je lambda výraz definován uvnitř statické metody, tak má přístup k ostatním statický metodám a statickým atributům třídy."], "correct": [2, 4]}, {"question": "Je něco špatně na následujícím kódu nebo ne?\ntry { ... }\ncatch (Exception e) { ... }\ncatch (ArithmeticException e) { ... }", "answers": ["Vše je v pořádku. Kód se přeloží.", "Nepřeloží se. Catch bloky jsou ve špatném pořadí.", "Nepřeloží se. Je použito stejné jméno proměnné v obou blocích.", "Přeloží se, ale měl by tam správně být jeden catch blok tvaru catch (Exception | ArithmeticException e) { ... }."], "correct": [1]}, {"question": "Rozlišujeme tři základní typy výjimek:\na) Kontrolované\nb) Nekontrolované\nc) Chyby.\nPřiřaďte k těmto typům výjimek odpovídající typy chyb:\n1) Chyby, které očekáváme, že mohou nastávat.\n2) Chyby v kódu našeho programu, o kterých nevíme, že je tam vůbec máme.\n3) Chyby vzniklé mimo náš kód, např. v JVM nebo v systému.", "answers": ["a1, b2, c3", "a1, b3, c2", "a2, b1, c3", "a2, b3, c1", "a3, b1, c2", "a3, b2, c1"], "correct": [0]}, {"question": "Která všechna z těchto tvrzení týkajících se vstupu a výstupu jsou pravdivá?", "answers": ["Při zápisu daného objektu do výstupního datového proudu se vždy provede serializace a zápis pouze toho objektu.", "Při zápisu daného objektu do výstupního datového proudu může dojít k serializaci a zápisu i jiných objektů než je ten daný.", "Třída musí implementovat rozhraní java.io.Serializable, aby šlo její instance v I/O datových proudech jak serializovat tak deserializovat. Rozhraní Serializable tedy definuje zároveň i deserializaci.", "Třída musí implementovat rozhraní java.io.Serializable a java.io.Deserializable, aby šlo její instance v I/O datových proudech jak serializovat tak deserializovat.", "Proměnná definovaná v hlavičce try-with-resources (tedy ne před tímto příkazem) je platná pouze uvnitř try bloku.", "Proměnná definovaná v hlavičce try-with-resources (tedy ne před tímto příkazem) je platná i za try blokem (tj. v catch a finally blocích, pokud jsou uvedeny)."], "correct": [1, 2, 4]}, {"question": "Uvažujme tento kód pracující nad textovými soubory a.txt, b.txt:\n\n```\ntry ( BufferedReader in = new BufferedReader(new FileReader(\"a.txt\")),\n       BufferedWriter out =new BufferedWriter(new FileWriter(\"b.txt\") ) {\n    while (true) {\n        String s = in.readLine();\n        if (s == null) break;\n        out.writeLine(s);\n        out.newLine();\n    }\n}\n```\n\nKtreré tvrzení o něm je pravdivé?", "answers": ["Kód je v pořádku. Zkopírují se všechny řádky textu v a.txt do b.txt. Žádné nadbytečné řádky se v b.txt neobjeví.", "Kód se přeloží, ale volání newLine() přidají nadbytečné prázdné řádky do souboru b.txt oproti a.txt.", "Kód se nepřeloží, Konstruktory tříd Buffered(Reader/Writer) přijímají názvy souborů, nikoliv instance proudů.", "Kód se nepřeloží. V hlavičce try-with-resources se proměnné oddělují středníkem, nikoliv čárkou. Jinak je kód ale v pořádku."], "correct": [2]}, {"question": "Uvažujme tuto implementaci metody equals :\npublic boolean equals(Object obj) {\n    return true;\n}\nJe implementace korektní? Neboli definuje tato impemlementace relaci ekvivalence na objektech?", "answers": ["Ano. Všechny objekty patří do jediné třídy rozkladu.", "Ano. Každý objekt leží v samostatné třídě rozkladu.", "Ne, protože relace není reflexivní.", "Ne, protože relace není symetrická.", "Ne, protože relace není tranzitivní.", "Ne, protože relace není konzistentní."], "correct": [0]}, {"question": "Uvažujme tento kód pracující nad textovými soubory a.txt, b.txt:\ntry ( FileInputStream in = new FileInputStream(\"a.txt\");\n           FileOutputStream out = new FileOutputStream(\"b.txt\") ) {\n    while (true) {\n        int c = in.read();\n        if (c == -1) break;\n        out.write(c);\n    }\n}\nKtreré tvrzení o něm je pravdivé?", "answers": ["Kód je v pořádku. A to i přes to, že otevíráme bajtové proudy na textové soubory. Kopírujeme totiž celý obsah souboru.", "Kód se přeloží, ale nebude fungovat správně, protože používáme bajtové proudy na textové soubory.", "Kód se nepřeloží. V hlavičce try-with-resources se proměnné oddělují čárkou, nikoliv středníkem.", "Kód se nepřeloží. V hlavičce try-with-resources může být jen jedna proměnná. Správné řešení by mělo dva try-with-resources příkazy - jeden uvnitř druhého."], "correct": [0]}, {"question": "Které typy výjimek hozené v try bloku se chytí v uvedeném catch bloku?\ntry { ... } catch (Exception e) { ... }", "answers": ["Všechny.", "Jen kontrolované.", "Jen nekontrolované.", "Jen chyby.", "Jen kontrolované a nekontrolované.", "Jen kontrolované a chyby.", "Jen nekontrolované a chyby."], "correct": [4]}];
+
+let allQuestions = QUESTIONS_DATA.filter(q => q.answers && q.answers.length > 0);
+let currentPool = [];
+let wrongAnswers = [];
+let currentIndex = 0;
+let correctCount = 0;
+let totalAnswered = 0;
+let round = 1;
+
+function init() {
+  currentPool = shuffle([...allQuestions]);
+  wrongAnswers = [];
+  currentIndex = 0;
+  correctCount = 0;
+  totalAnswered = 0;
+  round = 1;
+  render();
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function normalizeCorrect(q) {
+  if (!q.correct || q.correct.length === 0) return [];
+  return q.correct.map(c => typeof c === 'number' ? c : parseInt(c)).filter(c => c >= 0);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatQuestion(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+let submitted = false;
+let userAnswers = [];
+
+function render() {
+  const app = document.getElementById('app');
+  submitted = false;
+  userAnswers = [];
+
+  if (currentIndex >= currentPool.length) {
+    if (wrongAnswers.length > 0) {
+      round++;
+      currentPool = shuffle([...wrongAnswers]);
+      wrongAnswers = [];
+      currentIndex = 0;
+    } else {
+      app.innerHTML = `<div class="done-message">
+        <h2>All questions mastered!</h2>
+        <p>${correctCount}/${totalAnswered} correct</p>
+        <button class="btn" onclick="resetAll()">Start Over</button>
+      </div>`;
+      return;
+    }
+  }
+
+  if (currentPool.length === 0) {
+    app.innerHTML = `<div class="done-message">
+      <h2>No questions available</h2>
+      <button class="btn" onclick="resetAll()">Start Over</button>
+    </div>`;
+    return;
+  }
+
+  const q = currentPool[currentIndex];
+  const correctIdx = normalizeCorrect(q);
+
+  const progressPct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 0;
+  const isMulti = correctIdx.length > 1;
+
+  app.innerHTML = `
+    <div class="progress">
+      <span>Question ${currentIndex + 1}/${currentPool.length}</span>
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:${progressPct}%"></div></div>
+      <span>Score: <span class="score">${correctCount}/${totalAnswered}</span></span>
+    </div>
+    <div class="question-card">
+      <div class="question-text">${formatQuestion(q.question)}</div>
+      <div class="answers" id="answers"></div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn" id="submitBtn" onclick="submitAnswer()">Check</button>
+        <span style="font-size:0.8em;color:#888;">${isMulti ? '(select all correct)' : '(select correct)'}</span>
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <button class="btn" id="nextBtn" style="display:none;" onclick="nextQuestion()">Next</button>
+    </div>
+    <div class="retry-section" id="retrySection"></div>
+  `;
+
+  const answersDiv = document.getElementById('answers');
+  q.answers.forEach((ans, idx) => {
+    const label = document.createElement('label');
+    label.className = 'answer-label';
+    label.id = `ans-label-${idx}`;
+    label.innerHTML = `
+      <input type="checkbox" id="ans-${idx}" onchange="onSelect(${idx})">
+      <span>${escapeHtml(ans)}</span>
+    `;
+    answersDiv.appendChild(label);
+  });
+}
+
+function onSelect(idx) {
+  const cb = document.getElementById(`ans-${idx}`);
+  if (cb.checked) {
+    if (!userAnswers.includes(idx)) userAnswers.push(idx);
+  } else {
+    userAnswers = userAnswers.filter(i => i !== idx);
+  }
+}
+
+function submitAnswer() {
+  if (userAnswers.length === 0) return;
+  submitted = true;
+
+  const q = currentPool[currentIndex];
+  const correctIdx = normalizeCorrect(q);
+
+  const correctSet = new Set(correctIdx);
+  const userSet = new Set(userAnswers);
+
+  let allCorrect = true;
+
+  // Mark each answer
+  q.answers.forEach((_, idx) => {
+    const label = document.getElementById(`ans-label-${idx}`);
+    const cb = document.getElementById(`ans-${idx}`);
+    cb.disabled = true;
+    const isCorrect = correctSet.has(idx);
+    const userSelected = userSet.has(idx);
+
+    if (isCorrect && userSelected) {
+      label.classList.add('correct');
+    } else if (!isCorrect && userSelected) {
+      label.classList.add('incorrect');
+      allCorrect = false;
+    } else if (isCorrect && !userSelected) {
+      label.classList.add('missed');
+      allCorrect = false;
+    }
+  });
+
+  document.getElementById('submitBtn').style.display = 'none';
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + (allCorrect ? 'correct-fb' : 'wrong-fb');
+  if (allCorrect) {
+    fb.textContent = 'Correct!';
+    correctCount++;
+  } else {
+    fb.textContent = 'Incorrect. The correct answers are highlighted above (green = correct you selected, orange = correct you missed, red = incorrect you selected).';
+    wrongAnswers.push(q);
+  }
+  totalAnswered++;
+
+  document.getElementById('nextBtn').style.display = 'inline-block';
+  document.getElementById('nextBtn').focus();
+
+  updateRetrySection();
+}
+
+function nextQuestion() {
+  currentIndex++;
+  render();
+}
+
+function updateRetrySection() {
+  const section = document.getElementById('retrySection');
+  if (!section) return;
+  if (wrongAnswers.length > 0) {
+    section.innerHTML = `<hr>Wrong so far this round: <span class="badge">${wrongAnswers.length}</span> — will retest after finishing this pool.`;
+  } else {
+    section.innerHTML = '';
+  }
+}
+
+function resetAll() {
+  currentPool = shuffle([...allQuestions]);
+  wrongAnswers = [];
+  currentIndex = 0;
+  correctCount = 0;
+  totalAnswered = 0;
+  round = 1;
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

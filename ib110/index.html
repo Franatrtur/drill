@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IB110 Flashcards - Hardcore Mode</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --coral: #D85A30; --coral-light: #FAECE7; --coral-mid: #F0997B;
+            --cream: #FAFAF8; --border: #E8E4DC; --text: #2C2C2A; --muted: #888780;
+        }
+        body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--text); padding: 1.5rem 1rem 2rem; min-height: 400px; }
+        h2.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+        #app { max-width: 640px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .title { font-family: 'Lora', serif; font-size: 17px; font-weight: 500; color: var(--text); }
+        .round-badge { font-size: 12px; font-weight: 500; color: var(--coral); background: var(--coral-light); padding: 4px 10px; border-radius: 20px; letter-spacing: .3px; }
+        
+        .filter-row { display: flex; gap: 12px; margin-bottom: 1.5rem; background: #fff; padding: 8px 14px; border-radius: 10px; border: 0.5px solid var(--border); }
+        .filter-label { font-size: 12px; color: var(--muted); align-self: center; margin-right: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-item { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 500; }
+        .filter-item input { accent-color: var(--coral); cursor: pointer; }
+
+        .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+        .progress-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--coral); border-radius: 2px; transition: width .3s ease; }
+        .progress-label { font-size: 12px; color: var(--muted); min-width: 50px; text-align: right; }
+        .deck-stats { display: flex; gap: 12px; margin-bottom: 1.5rem; }
+        .stat { flex: 1; background: #fff; border: 0.5px solid var(--border); border-radius: 10px; padding: .75rem 1rem; text-align: center; }
+        .stat-n { font-size: 22px; font-weight: 500; color: var(--text); }
+        .stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: .3px; text-transform: uppercase; }
+        .stat-n.known { color: #3B6D11; } .stat-n.unknown { color: var(--coral); } .stat-n.rem { color: #185FA5; }
+        .scene { perspective: 1200px; width: 100%; height: 280px; margin-bottom: 1.25rem; cursor: pointer; }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.4,0,.2,1); }
+        .card.flipped { transform: rotateY(180deg); }
+        .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem 2rem; border: 0.5px solid var(--border); overflow-y: auto; }
+        .front { background: #fff; }
+        .back { background: #fff; transform: rotateY(180deg); }
+        .face-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); position: absolute; top: 14px; left: 18px; font-family: 'DM Sans', sans-serif; }
+        .face-hint { font-size: 11px; color: var(--muted); position: absolute; bottom: 14px; right: 16px; }
+        .card-term { font-family: 'Lora', serif; font-size: 18px; font-weight: 500; color: var(--text); text-align: center; line-height: 1.4; }
+        .card-content { font-size: 14px; line-height: 1.6; max-width: 100%; text-align: left; align-self: flex-start; width: 100%; }
+        .katex { font-size: 1.1em; }
+        .nav-row { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+        .btn { border: 0.5px solid var(--border); background: #fff; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--text); padding: 8px 14px; cursor: pointer; transition: background .15s, border-color .15s, transform .1s; display: flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--cream); border-color: #ccc; }
+        .btn:active { transform: scale(.97); }
+        .btn-icon { padding: 8px 10px; }
+        .btn-primary { background: var(--coral); color: #fff; border-color: var(--coral); }
+        .btn-primary:hover { background: #c04f28; border-color: #c04f28; }
+        .btn-success { background: #EAF3DE; color: #3B6D11; border-color: #C0DD97; }
+        .btn-success:hover { background: #d5eac4; border-color: #a8cc78; }
+        .btn-danger { background: var(--coral-light); color: #993C1D; border-color: #F5C4B3; }
+        .btn-danger:hover { background: #f5d9cc; border-color: #efaa88; }
+        .btn-muted { color: var(--muted); }
+        .spacer { flex: 1; }
+        .action-row { display: flex; gap: 8px; }
+        .action-row .btn { flex: 1; justify-content: center; font-size: 13px; padding: 10px; }
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #2C2C2A; color: #fff; font-size: 13px; padding: 10px 18px; border-radius: 8px; opacity: 0; transition: all .3s; pointer-events: none; z-index: 99; white-space: nowrap; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .empty-state { text-align: center; padding: 3rem 1rem; }
+        .empty-icon { font-size: 40px; margin-bottom: 1rem; }
+        .empty-title { font-family: 'Lora', serif; font-size: 18px; margin-bottom: .5rem; }
+        .empty-sub { font-size: 13px; color: var(--muted); line-height: 1.6; white-space: pre-line; }
+        .known-dot, .unknown-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .known-dot { background: #3B6D11; } .unknown-dot { background: var(--coral); }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .copy-btn:hover {
+            color: var(--coral);
+            background: var(--coral-light);
+        }
+        .copy-btn i { font-size: 18px; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <span class="title">IB110: Základy informatiky</span>
+            <span class="round-badge" id="round-label">Kolo 1</span>
+        </div>
+
+        <div class="filter-row">
+            <span class="filter-label">Zobrazit:</span>
+            <label class="filter-item"><input type="checkbox" id="f-core" checked onchange="applyFilters()"> Povinné</label>
+            <label class="filter-item"><input type="checkbox" id="f-adv" checked onchange="applyFilters()"> Rozšířené</label>
+        </div>
+
+        <div class="progress-row">
+            <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+            <span class="progress-label" id="prog-label">0 / 0</span>
+        </div>
+
+        <div class="deck-stats">
+            <div class="stat"><div class="stat-n rem" id="s-rem">0</div><div class="stat-l">Zbývá</div></div>
+            <div class="stat"><div class="stat-n known" id="s-known">0</div><div class="stat-l">Umím</div></div>
+            <div class="stat"><div class="stat-n unknown" id="s-unk">0</div><div class="stat-l">Procvičit</div></div>
+        </div>
+
+        <div id="main-area">
+            <div class="scene" id="scene" onclick="flipCard()">
+                <div class="card" id="card">
+                    <div class="face front">
+                        <button class="copy-btn" onclick="event.stopPropagation(); copyPrompt()" title="Kopírovat dotaz pro AI">
+                            <i class="ti ti-copy"></i>
+                        </button>
+                        <span class="face-label">Otázka / Termín</span>
+                        <div class="card-term" id="front-text"></div>
+                        <span class="face-hint">klikni pro otočení →</span>
+                    </div>
+                    <div class="face back">
+                        <button class="copy-btn" onclick="event.stopPropagation(); copyPrompt()" title="Kopírovat dotaz pro AI">
+                            <i class="ti ti-copy"></i>
+                        </button>
+                        <span class="face-label">Odpověď / Definice</span>
+                        <div class="card-content" id="back-text"></div>
+                        <span class="face-hint">klikni pro otočení zpět</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-row">
+                <button class="btn btn-icon btn-muted" onclick="shuffleDeck()" title="Zamíchat"><i class="ti ti-arrows-shuffle"></i></button>
+                <button class="btn btn-icon" onclick="prevCard()" id="prev-btn"><i class="ti ti-arrow-left"></i></button>
+                <div class="spacer"></div>
+                <button class="btn btn-icon" onclick="nextCard()" id="next-btn"><i class="ti ti-arrow-right"></i></button>
+                <button class="btn btn-icon btn-muted" onclick="resetAll()" title="Resetovat vše"><i class="ti ti-refresh"></i></button>
+            </div>
+
+            <div class="action-row" id="action-row">
+                <button class="btn btn-success" onclick="markCard('known')"><span class="known-dot"></span> Toto umím</button>
+                <button class="btn btn-danger" onclick="markCard('unknown')"><span class="unknown-dot"></span> Ještě ne</button>
+            </div>
+          
+          <br>
+
+            <div class="action-row" id="action-row">
+                <button class="btn" onclick="window.location.href='https://filebin.net/0gf3kf6l9syvmdcj'"><i class="ti ti-download"></i> Přípravné testy <i class="ti ti-file"></i> <i class="ti ti-file"></i> <i class="ti ti-file"></i></button>
+            </div>
+          
+        </div>
+
+        <div id="done-area" style="display:none">
+            <div class="empty-state">
+                <div class="empty-icon">🎉</div>
+                <div class="empty-title" id="done-title">Kolo dokončeno!</div>
+                <div class="empty-sub" id="done-sub"></div>
+                <div style="display:flex;gap:8px;justify-content:center;margin-top:1.5rem">
+                    <button class="btn btn-primary" id="next-round-btn" onclick="nextRound()">Další kolo (jen neumělé)</button>
+                    <button class="btn" onclick="resetAll()"><i class="ti ti-refresh" style="margin-right:4px"></i>Začít znovu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const CARDS = [
+            {cat: "core", t: "Definice 1 [DFA]: Konečný automat", c: "DFA je uspořádaná pětice $A = (Q, \\Sigma, \\delta, s, F)$, kde:\n- $Q$ je konečná množina stavů\n- $\\Sigma$ je vstupní abeceda (konečná množina)\n- $\\delta: Q \\times \\Sigma \\to Q$ je přechodová funkce\n- $s \\in Q$ je počáteční stav\n- $F \\subseteq Q$ je množina koncových stavů"},
+            {cat: "core", t: "Definice 5 [DFA]: Rozšířená přechodová funkce $\\hat{\\delta}$", c: "$\\hat{\\delta}: Q \\times \\Sigma^* \\to Q$ je definována induktivně:\n1. $\\hat{\\delta}(q, \\epsilon) = q$\n2. $\\hat{\\delta}(q, wa) = \\delta(\\hat{\\delta}(q, w), a)$ pro $a \\in \\Sigma, w \\in \\Sigma^*$"},
+            {cat: "core", t: "Definice 2 [Jazyky]: Abeceda, Slovo, Jazyk", c: "Abeceda ($\\Sigma$): konečná množina symbolů.\nSlovo: konečná posloupnost prvků abecedy.\nJazyk: množina slov nad abecedou $\\Sigma$ (podmnožina $\\Sigma^*$).\n$\\epsilon$: prázdné slovo (posloupnost délky 0)."},
+            {cat: "core", t: "Definice 4 [DFA]: Výpočet DFA", c: "Výpočet DFA $A$ nad slovem $w = a_1 a_2 \\dots a_n$ je posloupnost stavů $q_0, q_1, \\dots, q_n$ taková, že:\n- $q_0 = s$\n- $q_i = \\delta(q_{i-1}, a_i)$ pro každé $1 \\le i \\le n$."},
+            {cat: "core", t: "Definice 6 [DFA]: Jazyk akceptovaný DFA", c: "Slovo $w$ je akceptováno DFA $A$, pokud výpočet nad $w$ končí v koncovém stavu ($q_n \\in F$).\n$L(A) = \\{w \\in \\Sigma^* \\mid s \\xrightarrow{w} t \\text{ a } t \\in F\\}$."},
+            {cat: "core", t: "Definice 3 [Slova]: Podslovo, Prefix, Sufix", c: "$u$ je podslovem $w$, pokud $\\exists v_1, v_2: w = v_1 u v_2$.\n$u$ je prefixem $w$, pokud $\\exists v: w = u v$.\n$u$ je sufixem $w$, pokud $\\exists v: w = v u$."},
+            {cat: "core", t: "Definice 4 [Regulární jazyky]: Regulární jazyk", c: "Jazyk $L$ je regulární, pokud existuje DFA $A$ takový, že $L = L(A)$."},
+            {cat: "core", t: "Definice 5 [Regulární jazyky]: Produktový automat", c: "Pro $A_1, A_2$ se společnou $\\Sigma$ je produktový automat $A = (Q_1 \\times Q_2, \\Sigma, \\delta, (s_1, s_2), F)$, kde $\\delta((q_1, q_2), a) = (\\delta_1(q_1, a), \\delta_2(q_2, a))$."},
+            {cat: "core", t: "Definice 6 [Regulární jazyky]: Doplněk jazyka", c: "Doplňkem jazyka $L$ vzhledem k $\\Sigma$ je jazyk $\\bar{L} = \\Sigma^* \\setminus L$."},
+            {cat: "adv", t: "Formální konstrukce doplňku ($\\bar{L}$)", c: "$\\bar{A} = (Q, \\Sigma, \\delta, s, Q \\setminus F)$.\n**Poznámka:** Funguje pouze pro úplně definovaný DFA (u NFA by pouhé prohození stavů nefungovalo)."},
+            {cat: "adv", t: "Symetrická diference (Koncové stavy)", c: "Nastavení $F$ pro symetrickou diferenci $L_1 \\triangle L_2$ v součinovém automatu:\n$F = (F_1 \\times (Q_2 \\setminus F_2)) \\cup ((Q_1 \\setminus F_1) \\times F_2)$."},
+            {cat: "core", t: "Věta 1 [Regulární jazyky]: Uzavřenost na průnik a sjednocení", c: "Třída regulárních jazyků je uzavřena na operace průniku ($\\cap$) a sjednocení ($\\cup$)."},
+            {cat: "core", t: "Definice 1 [NFA]: Nedeterministický konečný automat", c: "NFA je uspořádaná pětice $A = (Q, \\Sigma, \\delta, s, F)$, kde $\\delta: Q \\times \\Sigma \\to 2^Q$ je přechodová funkce."},
+            {cat: "core", t: "Definice 2 [NFA]: Rozšířená přechodová funkce $\\hat{\\delta}$", c: "$\\hat{\\delta}: Q \\times \\Sigma^* \\to 2^Q$ definována induktivně:\n1. $\\hat{\\delta}(q, \\epsilon) = \\{q\\}$\n2. $\\hat{\\delta}(q, wa) = \\bigcup_{p \\in \\hat{\\delta}(q, w)} \\delta(p, a)$"},
+            {cat: "core", t: "Definice 3 [NFA]: Jazyk akceptovaný NFA", c: "$L(A) = \\{w \\in \\Sigma^* \\mid \\exists \\text{ výpočet nad } w \\text{ končící v } t \\in F\\}$."},
+            {cat: "core", t: "Definice 4 [NFA]: NFA s $\\epsilon$-kroky ($\\epsilon$-NFA)", c: "$\\epsilon$-NFA je uspořádaná pětice $(Q, \\Sigma, \\delta, s, F)$, kde $\\delta: Q \\times (\\Sigma \\cup \\{\\epsilon\\}) \\to 2^Q$."},
+            {cat: "core", t: "Definice 5 [Jazyky]: Zřetězení jazyků", c: "$L_1 \\cdot L_2 = \\{w \\mid w = v_1 v_2, v_1 \\in L_1, v_2 \\in L_2\\}$."},
+            {cat: "adv", t: "Konstrukce pro zřetězení ($L_1 \\cdot L_2$)", c: "Vezmeme automaty $A_1, A_2$. Přidáme $\\epsilon$-přechody z každého koncového stavu $F_1$ do počátečního stavu $s_2$. Koncové stavy výsledného automatu budou pouze ty z $F_2$."},
+            {cat: "core", t: "Věta 1 [NFA]: Ekvivalence DFA a NFA", c: "Pro každý NFA existuje ekvivalentní DFA (tzv. podmnožinová konstrukce)."},
+            {cat: "core", t: "Věta 3 [NFA]: Ekvivalence $\\epsilon$-NFA a DFA", c: "Pro každý $\\epsilon$-NFA existuje ekvivalentní DFA. Regulární jazyky jsou uzavřeny na zřetězení."},
+            {cat: "adv", t: "Ekvivalence automatů (Rozhodnutelnost)", c: "Proč je možné pro libovolné dva FA rozhodnout, zda jsou ekvivalentní?\nProtože $L_1 = L_2 \\iff (L_1 \\cap \\bar{L_2}) \\cup (\\bar{L_1} \\cap L_2) = \\emptyset$. Prázdnost regulárního jazyka je rozhodnutelná dosažitelností v grafu."},
+            {cat: "core", t: "Definice 1 [Minimalizace]: Rozlišitelné stavy", c: "Stavy $q, r$ jsou rozlišitelné slovem $w$, pokud výpočet z $q$ nad $w$ končí v $F$ a výpočet z $r$ nad $w$ končí mimo $F$ (nebo naopak)."},
+            {cat: "core", t: "Definice 2 [Minimalizace]: Minimální automat", c: "DFA $A$ je minimální pro $L$, pokud:\n1. $L = L(A)$\n2. Každé dva různé stavy jsou rozlišitelné\n3. Každý stav je dosažitelný z $s$"},
+            {cat: "core", t: "Věta 1 [Minimalizace]: Myhill-Nerode (vztah k počtu stavů)", c: "Minimální DFA má nejmenší možný počet stavů mezi všemi DFA akceptujícími daný jazyk."},
+            {cat: "core", t: "Věta 4 [Minimalizace]: Jedinečnost minimálního automatu", c: "Pro každý regulární jazyk existuje jedinečný (až na pojmenování stavů) minimální DFA."},
+            {cat: "core", t: "Věta 5 [Minimalizace]: Kanonický DFA", c: "Při fixním uspořádání abecedy existuje právě jeden minimální DFA s kanonickým pojmenováním stavů."},
+            {cat: "core", t: "Definice 1 [Gramatiky]: Formální gramatika", c: "Gramatika je čtveřice $G = (N, \\Sigma, P, S)$, kde:\n- $N$ je množina neterminálů\n- $\\Sigma$ je množina terminálů\n- $P \\subseteq (N \\cup \\Sigma)^+ \\times (N \\cup \\Sigma)^*$ jsou pravidla\n- $S \\in N$ je počáteční neterminál"},
+            {cat: "core", t: "Definice 4 [Gramatiky]: Jazyk generovaný gramatikou", c: "$L(G) = \\{w \\in \\Sigma^* \\mid S \\Rightarrow^* w\\}$ (slova složená pouze z terminálů odvoditelná z $S$)."},
+            {cat: "core", t: "[Gramatiky]: Chomského hierarchie (typy)", c: "Typ 0: Libovolná (rekurzivně spočetné)\nTyp 1: Kontextová (len(α) $\\le$ len(β))\nTyp 2: Bezkontextová (A $\\to$ α)\nTyp 3: Regulární (A $\\to$ aB, A $\\to$ a, A $\\to \\epsilon$)"},
+            {cat: "core", t: "Věta 1 [Gramatiky]: Vztah k regulárním jazykům", c: "Jazyk je regulární právě tehdy, když je generován regulární gramatikou (Typ 3)."},
+            {cat: "core", t: "Definice 1 [RegExp]: Regulární výraz (syntax)", c: "Konstrukce: $a \\in \\Sigma$, $\\epsilon$, $\\emptyset$, $(E+F)$, $(E \\cdot F)$, $E^*$."},
+            {cat: "core", t: "Věta 2 [RegExp]: Kleeneho věta (směr RegExp -> DFA)", c: "Každý jazyk reprezentovaný regulárním výrazem je regulární."},
+            {cat: "core", t: "Věta 3 [RegExp]: Kleeneho věta (směr DFA -> RegExp)", c: "Pro každý regulární jazyk existuje regulární výraz, který jej reprezentuje."},
+            {cat: "core", t: "Definice 1 [TS]: Výpočetní problém", c: "Výpočetní problém je dvojice $(\\mathcal{D}, out)$, kde $\\mathcal{D}$ je doména (vstupy) a $out$ je funkce přiřazující každému vstupu výstup."},
+            {cat: "core", t: "Definice 2 [TS]: Rozhodovací problém", c: "Problém $(\\mathcal{D}, out)$ je rozhodovací, pokud $out(x) \\in \\{True, False\\}$ pro každý vstup $x \\in \\mathcal{D}$."},
+            {cat: "core", t: "Definice 3 [TS]: Deterministický Turingův stroj (DTS)", c: "DTS je sedmice $T = (Q, \\Sigma, \\Gamma, \\delta, s, q_{acc}, q_{rej})$, kde:\n- $Q$ je konečná množina stavů\n- $\\Sigma$ je vstupní abeceda\n- $\\Gamma$ je pásková abeceda ($\\Sigma \\subset \\Gamma, \\sqcup, \\triangleright \\in \\Gamma \\setminus \\Sigma$)\n- $\\delta: Q \\times \\Gamma \\to Q \\times \\Gamma \\times \\{+1, -1, 0\\} \\cup \\{\\perp\\}$\n- $s$ je počáteční stav, $q_{acc}$ akceptující, $q_{rej}$ zamítající"},
+            {cat: "core", t: "Definice 4 [TS]: Konfigurace", c: "Konfigurace stroje $T$ je trojice $(q, \\alpha, i) \\in Q \\times \\Gamma^\\omega \\times \\mathbb{N}$, kde:\n- $q$ je aktuální stav\n- $\\alpha$ je obsah pásky (začíná $\\triangleright$, zbytek $\\sqcup^\\omega$)\n- $i$ je pozice hlavy"},
+            {cat: "core", t: "Definice 5 [TS]: Krok výpočtu (Formálně)", c: "Přechod $(s, \\alpha, i) \\to (t, \\beta, j)$, pokud existuje $\\delta(s, \\alpha[i]) = (t, a, \\Delta)$ takové, že:\n- $j = i + \\Delta$\n- $\\beta[i] = a$\n- $\\beta[k] = \\alpha[k]$ pro všechna $k \\neq i$"},
+            {cat: "core", t: "Definice 8 [TS]: Akceptace v DTS", c: "- **Akceptuje:** Výpočet je konečný a končí v $q_{acc}$.\n- **Zamítá:** Výpočet je konečný a končí v $q_{rej}$ nebo zaseknutím ($\\perp$).\n- **Cyklí:** Výpočet je nekonečný."},
+            {cat: "core", t: "Definice 1 [Slide 12]: Nedeterministický Turingův stroj (NTS)", c: "Stejný jako DTS, ale $\\delta: Q \\times \\Gamma \\to 2^{Q \\times \\Gamma \\times \\{+1, -1, 0\\}}$.\nSlovo je akceptováno, pokud existuje *alespoň jeden* výpočet končící v $q_{acc}$."},
+            {cat: "adv", t: "Varianty TS a jejich síla", c: "Vícepáskové TS, TS s obousměrně nekonečnou páskou i NTS jsou výpočetně ekvivalentní standardnímu DTS (simulovatelné). Z hlediska **rozhodnutelnosti** nepřinášejí nic navíc."},
+            {cat: "core", t: "Definice 1 [Rozhodnutelnost]: Rozhodnutelný problém", c: "Problém $L$ je rozhodnutelný, pokud existuje DTS $T$, který pro každý vstup $w \\in L$ akceptuje a pro každý vstup $w \\notin L$ zamítne (nikdy necyklí)."},
+            {cat: "core", t: "[TS]: Churchova-Turingova teze", c: "Každý proces, který lze intuitivně nazvat algoritmem (vykonatelný na reálném počítači), je implementovatelný Turingovým strojem. TS definuje hranici toho, co je vyčíslitelné."},
+            {cat: "core", t: "Definice 2 [Slide 11]: Univerzální Turingův stroj (U)", c: "Stroj $U$, který na vstupu $bin(T)2bin(w)$ simuluje výpočet stroje $T$ nad slovem $w$. $U$ akceptuje právě tehdy, když $T$ akceptuje $w$."},
+            {cat: "adv", t: "Existence nerozhodnutelných problémů (Důkaz)", c: "Pomocí **diagonalizace**. Rozhodovacích problémů (jazyků) je nespočetně mnoho ($2^{\\aleph_0}$), ale Turingových strojů je jen spočetně mnoho (každý má konečný binární kód)."},
+            {cat: "core", t: "Věta 3 [Nerozhodnutelnost]: Problém zastavení (Halt)", c: "$Halt = \\{bin(T)2bin(w) \\mid T \\text{ je DTS a } T \\text{ zastaví nad } w\\}$ je nerozhodnutelný."},
+            {cat: "core", t: "Definice 3 [Rozhodnutelnost]: Částečně rozhodnutelný problém", c: "Problém $L$ je částečně rozhodnutelný, pokud existuje DTS $T$, který pro $w \\in L$ akceptuje a pro $w \\notin L$ buď zamítne, nebo cyklí."},
+            {cat: "core", t: "Věta 6 [Rozhodnutelnost]: Vztah doplňku a rozhodnutelnosti", c: "Jazyk $L$ je rozhodnutelný $\\iff$ $L$ i jeho doplněk $\\bar{L}$ jsou částečně rozhodnutelné.\n**Důsledek:** Protože $Halt$ je částečně rozhodnutelný, ale není rozhodnutelný, jeho doplněk $\\overline{Halt}$ není ani částečně rozhodnutelný."},
+            {cat: "core", t: "Definice 4 [Slide 13]: Formální definice redukce ($\\le$)", c: "Funkce $f: \\Sigma_1^* \\to \\Sigma_2^*$ taková, že:\n1. $f$ je počitatelná DTS, který vždy zastaví.\n2. $w \\in L_1 \\iff f(w) \\in L_2$ pro všechna $w \\in \\Sigma_1^*$."},
+            {cat: "adv", t: "Vlastnosti redukce a (ne)rozhodnutelnosti", c: "Pokud $L_1 \\le L_2$, pak:\n- $L_2$ rozhodnutelný $\\implies$ $L_1$ rozhodnutelný.\n- $L_1$ nerozhodnutelný $\\implies$ $L_2$ nerozhodnutelný.\n(Analogicky pro částečnou rozhodnutelnost)."},
+            {cat: "core", t: "Definice 1 [Redukce]: Polynomiální redukce ($\\le_p$)", c: "Stejné jako u obyčejné redukce, ale funkce $f$ musí být počitatelná v **polynomiálním čase**. To je nutné pro zachování třídy P."},
+            {cat: "core", t: "[Složitost]: Třídy PTIME a EXPTIME", c: "- **P:** Jazyky rozhodnutelné DTS v čase $O(n^k)$.\n- **EXPTIME:** Jazyky rozhodnutelné DTS v čase $O(2^{n^k})$.\nPlatí $P \\neq EXPTIME$."},
+            {cat: "core", t: "Definice 11 [Slide 14]: Třída NP", c: "Jazyky rozhodnutelné **nedeterministickým** TS v polynomiálním čase $O(n^k)$.\nPlatí $P \\subseteq NP \\subseteq EXPTIME$."},
+            {cat: "core", t: "Definice 3 [Složitost]: C-těžkost a C-úplnost", c: "- **$C$-těžký:** Každý problém z třídy $C$ se na něj polynomiálně redukuje.\n- **$C$-úplný:** Je $C$-těžký a zároveň sám patří do třídy $C$."},
+            {cat: "core", t: "Věta 3 [Složitost]: NP-úplnost a P vs NP", c: "Pokud existuje NP-úplný problém, který patří do P, pak $P = NP$."},
+            {cat: "core", t: "Věta 5 [Složitost]: Dokazování NP-úplnosti", c: "Pokud $L_1$ je NP-úplný, $L_2 \\in NP$ a $L_1 \\le_p L_2$, pak $L_2$ je NP-úplný."},
+            {cat: "core", t: "Definice 1 & 2 [Slide 16]: Prostorová složitost $Space_A(n)$", c: "Počet políček **pracovní pásky**, na která stroj zapíše znak během výpočtu. $Space_A(n)$ je maximum přes všechny vstupy délky $n$."},
+            {cat: "core", t: "Definice tříd L, NL, PSPACE", c: "- **L (LOGSPACE):** DTS v prostoru $O(\\log n)$.\n- **NL (NLOGSPACE):** NTS v prostoru $O(\\log n)$.\n- **PSPACE:** DTS v prostoru $O(n^k)$."},
+            {cat: "adv", t: "Logspace redukce ($\\le_L$)", c: "Redukce počitatelná DTS v prostoru $O(\\log n)$. Používá se pro porovnávání problémů uvnitř P (např. pro NL-úplnost)."},
+            {cat: "adv", t: "[DFA - Slide 8 Box] Co znamená 'úplně definovaný'?", c: "Že přechodová funkce $\\delta: Q \\times \\Sigma \\to Q$ je **totální**. Tj. pro **každou** dvojici stavu $q \\in Q$ a symbolu $a \\in \\Sigma$ musí existovat právě jeden cílový stav."},
+            {cat: "adv", t: "[Algoritmus] Odstranění $\\epsilon$-kroků u NFA (Idea)", c: "1. Spočítáme $\\epsilon$-uzávěr pro každý stav.\n2. Nový NFA má stejné stavy.\n3. Přechod $\\delta'(q, a)$ obsahuje stavy dostupné cestou $\\epsilon \\dots \\epsilon \\to a \\to \\epsilon \\dots \\epsilon$."},
+            {cat: "adv", t: "[Algoritmus] Determinizace NFA (Subset Construction)", c: "1. Počáteční stav DFA je $\\epsilon$-uzávěr počátečního stavu NFA.\n2. $\\delta_D(Q', a) = \\bigcup_{q \\in Q'} \\epsilon\\text{-uzávěr}(\\delta(q, a))$.\n3. Koncové stavy DFA jsou množiny obsahující aspoň jeden koncový stav NFA."},
+            {cat: "adv", t: "[Algoritmus] Minimalizace DFA (Třídy rozkladu)", c: "1. Rozdělíme stavy na $F$ a $Q \\setminus F$ ($R_0$).\n2. V kroku $i+1$ dělíme třídu, pokud se pro nějaký symbol $a$ dostanou do různých tříd v kroku $i$.\n3. Končíme, když se rozklad nemění."},
+            {cat: "adv", t: "[Operace] $F$ pro rozdíl $L(A_1) \\setminus L(A_2)$?", c: "$F = F_1 \\times (Q_2 \\setminus F_2)$ (jsme v koncovém prvního, ale ne v koncovém druhého)."},
+            {cat: "adv", t: "[Operace] $F$ pro doplněk $\\bar{L}(A)$?", c: "$F = Q \\setminus F_{původní}$ (vyžaduje **úplně definovaný** DFA!)."},
+            {cat: "adv", t: "[Decidability] Dokaž: $L, \\bar{L} \\in RE \\implies L \\in R$", c: "1. Máme $T_1$ pro $L$ a $T_2$ pro $\\bar{L}$.\n2. Spustíme je 'paralelně' (střídáme kroky).\n3. Jeden nutně zastaví. Pokud $T_1$ -> Akceptujeme. Pokud $T_2$ -> Zamítneme."},
+            {cat: "adv", t: "[TS] Kdy se TS 'zasekne' (stuck)?", c: "Když je v konfiguraci $(q, \\alpha, i)$ a $\\delta(q, \\alpha[i]) = \\perp$."},
+            {cat: "adv", t: "[Complexity] Proč CHESS není v PTIME?", c: "Vyžaduje exponenciální čas k prohledání stavů (rozhodnutí vyhrávající strategie je EXPTIME-úplné)."},
+            {cat: "adv", t: "[Proof] Nerozhodnutelnost Halt $\\implies$ nerozhodnutelnost $\\bar{Halt}$?", c: "Třída rozhodnutelných jazyků je uzavřena na doplněk. Kdyby byl doplněk rozhodnutelný, byl by i Halt (spor)."},
+            {cat: "adv", t: "[DFA] Jaký je typ $\\delta$?", c: "$\\delta: Q \\times \\Sigma \\to Q$"},
+            {cat: "adv", t: "[NFA] Jaký je typ $\\delta$?", c: "$\\delta: Q \\times \\Sigma \\to 2^Q$"},
+            {cat: "adv", t: "[$\\epsilon$-NFA] Jaký je typ $\\delta$?", c: "$\\delta: Q \\times (\\Sigma \\cup \\{\\epsilon\\}) \\to 2^Q$"},
+            {cat: "adv", t: "[Produktový automat] $F$ pro PRŮNIK?", c: "$F = F_1 \\times F_2$"},
+            {cat: "adv", t: "[Produktový automat] $F$ pro SJEDNOCENÍ?", c: "$F = (F_1 \\times Q_2) \\cup (Q_1 \\times F_2)$"},
+            {cat: "adv", t: "[Regulární jazyky] Uzavřenost na doplněk?", c: "Ano (prohození $F$ a $Q \\setminus F$ v úplném DFA)."},
+            {cat: "adv", t: "[Doplněk] Proč je kritická abeceda $\\Sigma$?", c: "Doplněk je $\\Sigma^* \\setminus L$. Různé $\\Sigma$ vedou k různým jazykům."},
+            {cat: "adv", t: "[Minimalizace] Co jsou ekvivalentní stavy?", c: "Nejsou rozlišitelné žádným slovem $w \\in \\Sigma^*$."},
+            {cat: "adv", t: "[Minimalizace] Max. délka slova k rozlišení $n$ stavů?", c: "$n-1$"},
+            {cat: "adv", t: "[Minimalizace] Co je 'rozkladová tabulka'?", c: "Tabulka identifikátorů tříd rozkladu pro každou dvojici (stav, symbol)."},
+            {cat: "adv", t: "[Kanonizace] Idea BFS přejmenování?", c: "Procházení automatu do šířky dle abecedního pořadí symbolů a číslování stavů dle pořadí návštěvy."},
+            {cat: "adv", t: "[Gramatiky] Pravidlo Typu 3 (vpravo lineární)?", c: "$A \\to aB$, $A \\to a$ nebo $A \\to \\epsilon$."},
+            {cat: "adv", t: "[Gramatiky] Typ 3 $\\subseteq$ Typ 2?", c: "Ano (každá regulární je bezkontextová)."},
+            {cat: "adv", t: "[RegExp] Priorita operátorů?", c: "1. Iterace ($^*$), 2. Zřetězení ($\\cdot$), 3. Sjednocení ($+$)."},
+            {cat: "adv", t: "[RegExp] Výraz $\\emptyset^*$?", c: "Jazyk $\\{\\epsilon\\}$ (protože $L^0 = \\{\\epsilon\\}$)."},
+            {cat: "adv", t: "[RegExp] Rozdíl $\\epsilon$ vs $\\emptyset$?", c: "$\\epsilon$ je jazyk $\\{\\epsilon\\}$ (jedno prázdné slovo). $\\emptyset$ je prázdný jazyk $\\{\\}$ (žádné slovo)."},
+            {cat: "adv", t: "[Algoritmus] NFA $\\to$ RegExp (obecně)?", c: "Metoda eliminace stavů v přechodovém grafu s RegExp návěštími."},
+            {cat: "adv", t: "[Algoritmus] RegExp $\\to$ $\\epsilon$-NFA?", c: "Strukturální indukce (McNaughton-Yamada-Thompson konstrukce)."},
+            {cat: "adv", t: "[TS] Co je pásková abeceda $\\Gamma$?", c: "Všechny symboly na pásce. $\\Sigma \\subset \\Gamma$, obsahuje $\\triangleright$ a $\\sqcup$."},
+            {cat: "adv", t: "[TS] Čtení $\\triangleright$ a pohyb vlevo?", c: "Hlava nesmí opustit $\\triangleright$ (definice zakazuje pohyb vlevo z počátku)."},
+            {cat: "adv", t: "[Rozhodnutelnost] Rozdíl rozhodování vs částečné?", c: "Rozhodování musí vždy zastavit. Částečné může pro $w \\notin L$ cyklit."},
+            {cat: "adv", t: "[Rozhodnutelnost] Jsou rekurzivní = rozhodnutelné?", c: "Ano, jsou to synonyma."},
+            {cat: "adv", t: "[Rozhodnutelnost] Rekurzivně spočetné jazyky?", c: "Částečně rozhodnutelné (Typ 0)."},
+            {cat: "adv", t: "[Složitost] Co měří $steps_A(x)$ u NTM?", c: "Délku **nejdelšího** možného výpočtu nad $x$."},
+            {cat: "adv", t: "[Složitost] Proč $Time_A(n)$ používá $max$?", c: "Měříme složitost v nejhorším případě (worst-case)."},
+            {cat: "adv", t: "[Složitost] $f \\in O(g)$?", c: "$f$ roste asymptoticky nejvýše tak rychle jako $g$."},
+            {cat: "adv", t: "[Složitost] Faktorizace $\\in P$?", c: "Není známo (pravděpodobně ne)."},
+            {cat: "adv", t: "[NP-úplnost] Certifikát?", c: "Důkaz (svědek), jehož správnost lze ověřit v polynomiálním čase."},
+            {cat: "adv", t: "[NP-úplnost] SAT $\\in NP$?", c: "Ano, certifikátem je pravdivostní ohodnocení proměnných."},
+            {cat: "adv", t: "[NP-úplnost] Co znamená $P = NP$?", c: "Že nalezení řešení je stejně těžké jako jeho ověření."},
+            {cat: "adv", t: "[Komplexita] Vztah P, NP, EXPTIME?", c: "$P \\subseteq NP \\subseteq EXPTIME$."},
+            {cat: "adv", t: "[Chyták] Podjazyk regulárního je regulární?", c: "**Ne.** Např. $\\{a^n b^n\\} \\subset \\{a,b\\}^*$."},
+            {cat: "adv", t: "[Chyták] Stačí pro sjednocení $F_1 \\cup F_2$?", c: "**Ne.** Musí to být dvojice: $F = (F_1 \\times Q_2) \\cup (Q_1 \\times F_2)$."},
+            {cat: "adv", t: "[Chyták] Pravidlo $A \\to abcB$?", c: "Formálně ne (jen jeden terminál), ale v praxi se používá jako zkratka."},
+            {cat: "adv", t: "[Chyták] NFA bez koncového stavu?", c: "Akceptuje $\\emptyset$."},
+            {cat: "adv", t: "[Chyták] Existuje NFA bez ekvivalentního DFA?", c: "Ne. Každý NFA lze převést na DFA."},
+            {cat: "adv", t: "[Chyták] $P \\le_p X$ a $P$ je rozhodnutelný $\\implies$ $X$ je rozhodnutelný?", c: "**Ne.** $X$ může být mnohem těžší (i nerozhodnutelný)."},
+            {cat: "adv", t: "[Chyták] Musí univerzální TS přečíst celé slovo?", c: "Ne nutně. Zastaví, jakmile zastaví simulovaný stroj."}
+        ];
+
+        const STORE_KEY = 'ib110_fc_v1';
+        let state = { deck: [], idx: 0, round: 1, known: new Set(), unknown: new Set(), flipped: false };
+
+        function saveState() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify({ round: state.round, known: [...state.known], unknown: [...state.unknown], deckOrder: state.deck.map(d => d.t), idx: state.idx })); } catch (e) { }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORE_KEY);
+                if (!raw) return false;
+                const s = JSON.parse(raw);
+                state.round = s.round || 1;
+                state.known = new Set(s.known || []);
+                state.unknown = new Set(s.unknown || []);
+                if (s.deckOrder && s.deckOrder.length) {
+                    const map = Object.fromEntries(CARDS.map(c => [c.t, c]));
+                    state.deck = s.deckOrder.map(t => map[t]).filter(Boolean);
+                }
+                state.idx = Math.min(s.idx || 0, state.deck.length - 1);
+                return true;
+            } catch (e) { return false; }
+        }
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+            return a;
+        }
+
+        function init() {
+            const loaded = loadState();
+            if (!loaded || state.deck.length === 0) {
+                applyFilters(false);
+            } else {
+                render();
+            }
+        }
+
+        function applyFilters(shouldToast = true) {
+            const showCore = document.getElementById('f-core').checked;
+            const showAdv = document.getElementById('f-adv').checked;
+            
+            let pool = [];
+            if (showCore) pool = pool.concat(CARDS.filter(c => c.cat === 'core'));
+            if (showAdv) pool = pool.concat(CARDS.filter(c => c.cat === 'adv'));
+            
+            if (pool.length === 0) {
+                if (shouldToast) showToast('Vyberte alespoň jednu kategorii!');
+                document.getElementById('f-core').checked = true;
+                applyFilters(false);
+                return;
+            }
+            
+            state.deck = pool;
+            state.idx = 0;
+            state.round = 1;
+            state.known = new Set();
+            state.unknown = new Set();
+            if (shouldToast) showToast('Filtr aplikován, balíček resetován');
+            render();
+        }
+
+        function render() {
+            const total = state.deck.length;
+            const seen = state.idx;
+            document.getElementById('prog').style.width = total > 0 ? ((seen / total) * 100) + '%' : '0%';
+            document.getElementById('prog-label').textContent = seen + ' / ' + total;
+            document.getElementById('round-label').textContent = 'Kolo ' + state.round;
+            document.getElementById('s-rem').textContent = Math.max(0, total - seen);
+            document.getElementById('s-known').textContent = state.known.size;
+            document.getElementById('s-unk').textContent = state.unknown.size;
+
+            const done = (total === 0 || state.idx >= total);
+            document.getElementById('main-area').style.display = done ? 'none' : 'block';
+            document.getElementById('done-area').style.display = done ? 'block' : 'none';
+
+            if (done) { renderDone(); return; }
+
+            const card = state.deck[state.idx];
+            const frontEl = document.getElementById('front-text');
+            frontEl.innerHTML = card.t.replace(/\n/g, '<br>');
+            
+            document.getElementById('card').classList.remove('flipped');
+            state.flipped = false;
+
+            const backEl = document.getElementById('back-text');
+            backEl.innerHTML = card.c.replace(/\n/g, '<br>');
+            
+            renderMathInElement(document.getElementById('card'), {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ],
+                throwOnError : false
+            });
+
+            document.getElementById('prev-btn').disabled = state.idx === 0;
+            document.getElementById('prev-btn').style.opacity = state.idx === 0 ? '.35' : '1';
+
+            saveState();
+        }
+
+        function renderDone() {
+            const known = state.known.size, unk = state.unknown.size, total = known + unk;
+            const pct = total > 0 ? Math.round((known / total) * 100) : 0;
+            document.getElementById('done-title').textContent = pct === 100 ? 'Perfektní kolo! 🌟' : 'Kolo ' + state.round + ' hotovo!';
+            document.getElementById('done-sub').textContent =
+                known + ' umím · ' + unk + ' ještě procvičit\n' +
+                (unk > 0 ? 'V dalším kole se zaměříme na těch ' + unk + ', které ještě neumíš.' : 'Výborně, umíš všechno!');
+            const nb = document.getElementById('next-round-btn');
+            nb.style.display = unk > 0 ? '' : 'none';
+        }
+
+        function flipCard() {
+            const card = document.getElementById('card');
+            state.flipped = !state.flipped;
+            card.classList.toggle('flipped', state.flipped);
+        }
+
+        function nextCard() {
+            if (state.idx < state.deck.length - 1) { state.idx++; render(); }
+            else if (state.idx === state.deck.length - 1) { state.idx++; render(); }
+        }
+
+        function prevCard() {
+            if (state.idx > 0) { state.idx--; render(); }
+        }
+
+        function markCard(status) {
+            if (state.idx >= state.deck.length) return;
+            const card = state.deck[state.idx];
+            if (status === 'known') { state.known.add(card.t); state.unknown.delete(card.t); }
+            else { state.unknown.add(card.t); state.known.delete(card.t); }
+            showToast(status === 'known' ? 'Označeno jako umím ✓' : 'Označeno k procvičení');
+            if (state.idx < state.deck.length - 1) { setTimeout(() => { state.idx++; render(); }, 200); }
+            else { state.idx++; render(); }
+        }
+
+        function shuffleDeck() {
+            const remaining = state.deck.slice(state.idx);
+            const done = state.deck.slice(0, state.idx);
+            const shuffled = shuffle(remaining);
+            state.deck = [...done, ...shuffled];
+            render();
+            showToast('Balíček zamíchán');
+        }
+
+        function nextRound() {
+            const unkCards = state.deck.filter(c => state.unknown.has(c.t));
+            if (unkCards.length === 0) { showToast('Žádné karty k procvičení — resetuj vše'); return; }
+            state.deck = unkCards;
+            state.idx = 0; state.round++;
+            render();
+        }
+
+        function resetAll() {
+            applyFilters(false);
+            try { localStorage.removeItem(STORE_KEY); } catch (e) { }
+            showToast('Vše resetováno');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 1500);
+        }
+
+        function copyPrompt() {
+            const card = state.deck[state.idx];
+            if (!card) return;
+            const prompt = `Procvicuji si karticky do predmetu Zaklady informatiky IB110, v nemz se berou TS FA RE atd a mam tuto karticku:\n\nOTÁZKA: ${card.t}\nODPOVĚĎ: ${card.c}\n\nVysvetli mi ji a pomoz pochopit v sirsim kontextu proc je to dulezite a jaka otazka by se na testu mohla vyskytnout kde bych toto musel vyuzit.`;
+            
+            navigator.clipboard.writeText(prompt).then(() => {
+                showToast('Dotaz zkopírován pro AI');
+            }).catch(err => {
+                showToast('Chyba při kopírování');
+            });
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') nextCard();
+            if (e.key === 'ArrowLeft') prevCard();
+            if (e.key === ' ') { e.preventDefault(); flipCard(); }
+            if (e.key === 'k') markCard('known');
+            if (e.key === 'u') markCard('unknown');
+        });
+
+        init();
+    </script>
+</body>
+</html>
